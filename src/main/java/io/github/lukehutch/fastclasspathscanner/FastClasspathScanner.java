@@ -854,7 +854,7 @@ public class FastClasspathScanner {
                 String path = entry.getName();
                 boolean scanFile = false;
                 for (String pathToScan : pathsToScan) {
-                    if (path.startsWith(pathToScan)) {
+                    if (path.startsWith(pathToScan) || pathToScan.equals("/")) {
                         // File path has a whitelisted path as a prefix -- can scan file
                         scanFile = true;
                         break;
