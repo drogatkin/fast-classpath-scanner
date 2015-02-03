@@ -226,7 +226,7 @@ public class FastClasspathScanner {
      * @param packagesToScan
      *            package prefixes to scan, e.g. new String[] { "com.xyz.widget", "com.xyz.gizmo" }
      */
-    public FastClasspathScanner(String[] packagesToScan) {
+    public FastClasspathScanner(String ... packagesToScan) {
         HashSet<String> uniquePathsToScan = new HashSet<>();
         for (String packageToScan : packagesToScan) {
             uniquePathsToScan.add(packageToScan.replace('.', '/') + "/");
