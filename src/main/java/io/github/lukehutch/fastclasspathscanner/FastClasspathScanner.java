@@ -9,7 +9,7 @@
  *
  * The MIT License (MIT)
  *
- * Copyright (c) 2015 Luke Hutchison
+ * Copyright (c) 2014 Luke Hutchison
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
  * documentation files (the "Software"), to deal in the Software without restriction, including without
@@ -29,14 +29,6 @@
 
 package io.github.lukehutch.fastclasspathscanner;
 
-import io.github.lukehutch.fastclasspathscanner.classgraph.ClassGraphBuilder;
-import io.github.lukehutch.fastclasspathscanner.matchprocessor.ClassAnnotationMatchProcessor;
-import io.github.lukehutch.fastclasspathscanner.matchprocessor.FileMatchProcessor;
-import io.github.lukehutch.fastclasspathscanner.matchprocessor.InterfaceMatchProcessor;
-import io.github.lukehutch.fastclasspathscanner.matchprocessor.StaticFinalFieldMatchProcessor;
-import io.github.lukehutch.fastclasspathscanner.matchprocessor.SubclassMatchProcessor;
-import io.github.lukehutch.fastclasspathscanner.matchprocessor.SubinterfaceMatchProcessor;
-
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.File;
@@ -45,12 +37,21 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+
+import io.github.lukehutch.fastclasspathscanner.classgraph.ClassGraphBuilder;
+import io.github.lukehutch.fastclasspathscanner.matchprocessor.ClassAnnotationMatchProcessor;
+import io.github.lukehutch.fastclasspathscanner.matchprocessor.FileMatchProcessor;
+import io.github.lukehutch.fastclasspathscanner.matchprocessor.InterfaceMatchProcessor;
+import io.github.lukehutch.fastclasspathscanner.matchprocessor.StaticFinalFieldMatchProcessor;
+import io.github.lukehutch.fastclasspathscanner.matchprocessor.SubclassMatchProcessor;
+import io.github.lukehutch.fastclasspathscanner.matchprocessor.SubinterfaceMatchProcessor;
 
 /**
  * Uber-fast, ultra-lightweight Java classpath scanner. Scans the classpath by parsing the classfile binary format
@@ -226,7 +227,7 @@ public class FastClasspathScanner {
      * @param packagesToScan
      *            package prefixes to scan, e.g. new String[] { "com.xyz.widget", "com.xyz.gizmo" }
      */
-    public FastClasspathScanner(String ... packagesToScan) {
+    public FastClasspathScanner(String... packagesToScan) {
         HashSet<String> uniquePathsToScan = new HashSet<>();
         for (String packageToScan : packagesToScan) {
             uniquePathsToScan.add(packageToScan.replace('.', '/') + "/");
@@ -369,10 +370,13 @@ public class FastClasspathScanner {
             @Override
             public void lookForMatches() {
                 // For all classes with the given annotation
-                for (String classWithAnnotation : classGraphBuilder.getClassesWithAnnotation(annotation.getName())) {
+                ArrayList<String> classesWithAnnotation = classGraphBuilder.getClassesWithAnnotation(annotation.getName());
+                if (classesWithAnnotation != null)
+                for (String classWithAnnotation : classesWithAnnotation) {
                     try {
                         // Load class
-                        Class<?> klass = Class.forName(classWithAnnotation);
+			ClassLoader cl =  getClassLoader();
+                        Class<?> klass = cl == null?Class.forName(classWithAnnotation):Class.forName(classWithAnnotation, false, cl) ;
 
                         // Process match
                         classAnnotationMatchProcessor.processMatch(klass);
@@ -384,6 +388,10 @@ public class FastClasspathScanner {
             }
         });
         return this;
+    }
+
+    public ClassLoader getClassLoader() {
+       return null;
     }
 
     // -----------------------------------------------------------------------------------------------------
@@ -635,7 +643,7 @@ public class FastClasspathScanner {
 
         // Interfaces
         int interfaceCount = inp.readUnsignedShort();
-        ArrayList<String> interfaces = interfaceCount > 0 ? new ArrayList<>() : null;
+        ArrayList<String> interfaces = interfaceCount > 0 ? new ArrayList<String>() : null;
         for (int i = 0; i < interfaceCount; i++) {
             interfaces.add(readRefdString(inp, constantPool).replace('/', '.'));
         }
@@ -803,6 +811,7 @@ public class FastClasspathScanner {
         boolean scanDirs = false, scanFiles = false;
         for (String pathToScan : pathsToScan) {
             if (relativePath.startsWith(pathToScan) || //
+            		pathToScan.equals("/") ||
                     (relativePath.length() == pathToScan.length() - 1 && //
                     pathToScan.startsWith(relativePath))) {
                 // In a path that has a whitelisted path as a prefix -- can start scanning files
@@ -899,7 +908,7 @@ public class FastClasspathScanner {
      * Get a list of unique elements on the classpath (directories and files) as File objects, preserving order.
      * Classpath elements that do not exist are not included in the list.
      */
-    public static ArrayList<File> getUniqueClasspathElements() {
+    public List<File> getUniqueClasspathElements() {
         String[] pathElements = System.getProperty("java.class.path").split(File.pathSeparator);
         HashSet<String> pathElementsSet = new HashSet<>();
         ArrayList<File> pathFiles = new ArrayList<>();
@@ -929,6 +938,7 @@ public class FastClasspathScanner {
             // Iterate through path elements and recursively scan within each directory and zipfile
             for (File pathElt : getUniqueClasspathElements()) {
                 String path = pathElt.getPath();
+
                 if (pathElt.isDirectory()) {
                     // Scan within dir path element
                     scanDir(pathElt, path.length() + 1, scanTimestampsOnly);
