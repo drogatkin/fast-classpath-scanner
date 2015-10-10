@@ -995,7 +995,9 @@ public class FastClasspathScanner {
 					String pathLower = path.toLowerCase();
 					if (pathLower.endsWith(".jar") || pathLower.endsWith(".zip")) {
 						// Scan within jar/zipfile path element
-						scanZipfile(path, new ZipFile(pathElt), pathElt.lastModified(), scanTimestampsOnly);
+						try (ZipFile zipFile = new ZipFile(pathElt)){
+						   scanZipfile(path, zipFile, pathElt.lastModified(), scanTimestampsOnly);						
+						}
 					} else {
 						// File listed directly on classpath
 						scanFile(pathElt, path, pathElt.getName(), scanTimestampsOnly);
