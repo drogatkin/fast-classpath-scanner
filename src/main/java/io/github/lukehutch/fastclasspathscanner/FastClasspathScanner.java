@@ -652,8 +652,16 @@ public class FastClasspathScanner {
 			case 18: // invoke dynamic
 				inp.skipBytes(4);
 				break;
+		        case 19: // CONSTANT_Module  https://docs.oracle.com/javase/specs/jvms/se9/html/jvms-4.html
+			case 20: // CONSTANT_Package 53.0
+			// The CONSTANT_Utf8_info Structure
+		        	inp.skipBytes(2);
+		        	//inp.skipBytes(1);
+				//int lenh = inp.readUnsignedShort();
+				//inp.skipBytes(lenh);
+				break;
 			default:
-				// System.err.println("Unkown tag value for constant pool entry: " + tag);
+			 System.err.println("Unkown tag value for constant pool entry: " + tag);
 				break;
 			}
 		}
