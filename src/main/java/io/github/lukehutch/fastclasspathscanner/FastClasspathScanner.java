@@ -610,12 +610,12 @@ public class FastClasspathScanner {
 		int cpCount = inp.readUnsignedShort();
 		// Constant pool
 		Object[] constantPool = new Object[cpCount];
-		int[] tag = new int[cpCount];
+		//int[] tag = new int[cpCount];
 		int[] indirectStringRef = new int[cpCount];
 		Arrays.fill(indirectStringRef, -1);
 		for (int i = 1; i < cpCount; ++i) {
-			tag[i] = inp.readUnsignedByte();
-			switch (tag[i]) {
+			//tag[i] = inp.readUnsignedByte();
+			switch (inp.readUnsignedByte()) {
 			case 1: // Modified UTF8
 				constantPool[i] = inp.readUTF();
 				break;
@@ -653,7 +653,7 @@ public class FastClasspathScanner {
 			case 18: // invoke dynamic
 				inp.skipBytes(4);
 				break;
-		        case 19: // CONSTANT_Module  https://docs.oracle.com/javase/specs/jvms/se9/html/jvms-4.html
+		    case 19: // CONSTANT_Module  https://docs.oracle.com/javase/specs/jvms/se9/html/jvms-4.html
 			case 20: // CONSTANT_Package 53.0
 			// The CONSTANT_Utf8_info Structure
 		        	inp.skipBytes(2);
@@ -662,7 +662,7 @@ public class FastClasspathScanner {
 				//inp.skipBytes(lenh);
 				break;
 			default:
-				throw new RuntimeException("ClassfileFormatException: Unknown constant pool tag " + tag[i]
+				throw new RuntimeException("ClassfileFormatException: Unknown constant pool tag " //+ tag[i]
                         + " (element size unknown, cannot continue reading class). Please report this at "
                         + "https://github.com/classgraph/classgraph/issues");
 			}
