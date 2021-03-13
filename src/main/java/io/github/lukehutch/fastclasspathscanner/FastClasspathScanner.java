@@ -610,11 +610,12 @@ public class FastClasspathScanner {
 		int cpCount = inp.readUnsignedShort();
 		// Constant pool
 		Object[] constantPool = new Object[cpCount];
+		int[] tag = new int[cpCount];
 		int[] indirectStringRef = new int[cpCount];
 		Arrays.fill(indirectStringRef, -1);
 		for (int i = 1; i < cpCount; ++i) {
-			final int tag = inp.readUnsignedByte();
-			switch (tag) {
+			tag[i] = inp.readUnsignedByte();
+			switch (tag[i]) {
 			case 1: // Modified UTF8
 				constantPool[i] = inp.readUTF();
 				break;
@@ -661,8 +662,9 @@ public class FastClasspathScanner {
 				//inp.skipBytes(lenh);
 				break;
 			default:
-			 System.err.println("Unkown tag value for constant pool entry: " + tag);
-				break;
+				throw new RuntimeException("ClassfileFormatException: Unknown constant pool tag " + tag[i]
+                        + " (element size unknown, cannot continue reading class). Please report this at "
+                        + "https://github.com/classgraph/classgraph/issues");
 			}
 		}
 		// Resolve indirection of string references now that all the strings have been read
@@ -678,17 +680,23 @@ public class FastClasspathScanner {
 		boolean isInterface = (flags & 0x0200) != 0;
 
 		// The fully-qualified class name of this class, with slashes replaced with dots
-		String className = readRefdString(inp, constantPool).replace('/', '.');
-
-		// Determine if this fully-qualified class name has already been encountered during this scan
-		if (!classesEncounteredSoFarDuringScan.add(className)) {
-			// If so, skip this classfile, because the earlier class with the same name as this one
-			// occurred earlier on the classpath, so it masks this one.
-			return;
-		}
+		String className = readRefdString(inp, constantPool);
+		
+		if (className != null) {
+             className = className.replace('/', '.');
+			// Determine if this fully-qualified class name has already been encountered during this scan
+			if (!classesEncounteredSoFarDuringScan.add(className)) {
+				// If so, skip this classfile, because the earlier class with the same name as this one
+				// occurred earlier on the classpath, so it masks this one.
+				return;
+			}
+		} 
 
 		// Superclass name, with slashes replaced with dots
-		String superclassName = readRefdString(inp, constantPool).replace('/', '.');
+		String superclassName = readRefdString(inp, constantPool);
+		if (superclassName != null) {
+			superclassName = superclassName.replace('/', '.');
+		}
 
 		// Look up static field name match processors given class name 
 		HashMap<String, StaticFinalFieldMatchProcessor> staticFieldnameToMatchProcessor = classNameToStaticFieldnameToMatchProcessor
